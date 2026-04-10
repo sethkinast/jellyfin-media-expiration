@@ -1,0 +1,102 @@
+<!-- Web/configurationpage.html -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Media Expiration</title>
+</head>
+
+<body>
+    <div data-role="page" class="page type-interior pluginConfigurationPage"
+        data-require="emby-input,emby-button,emby-select,emby-checkbox" data-controller="MediaExpirationJS"
+        data-title="Media Expiration">
+        <div data-role="content">
+            <div class="content-primary">
+                <form id="MediaExpirationConfigForm" method="POST">
+                    <div class="sectionTitleContainer flex align-items-center">
+                        <h2 class="sectionTitle">Media Expiration Settings</h2>
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="movieExpirationDays">
+                            Movie Expiration (days after last watch, 0 = disabled)
+                        </label>
+                        <input id="movieExpirationDays" name="movieExpirationDays" type="number" min="0"
+                            is="emby-input" />
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="seasonExpirationDays">
+                            TV Season Expiration (days after last watch, 0 = disabled)
+                        </label>
+                        <input id="seasonExpirationDays" name="seasonExpirationDays" type="number" min="0"
+                            is="emby-input" />
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="unwatchedMovieExpirationDays">
+                            Unwatched Movie Expiration (days after added, 0 = disabled)
+                        </label>
+                        <input id="unwatchedMovieExpirationDays" name="unwatchedMovieExpirationDays" type="number" min="0"
+                            is="emby-input" />
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="unwatchedSeasonExpirationDays">
+                            Unwatched TV Season Expiration (days after added, 0 = disabled)
+                        </label>
+                        <input id="unwatchedSeasonExpirationDays" name="unwatchedSeasonExpirationDays" type="number" min="0"
+                            is="emby-input" />
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="expiringSoonWindowDays">
+                            "Expiring Soon" window (days)
+                        </label>
+                        <input id="expiringSoonWindowDays" name="expiringSoonWindowDays" type="number" min="1"
+                            is="emby-input" />
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="diskSpaceThresholdGb">
+                            Disk space threshold (GB free, 0 = always expire)
+                        </label>
+                        <input id="diskSpaceThresholdGb" name="diskSpaceThresholdGb" type="number" min="0"
+                            is="emby-input" />
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="diskSpaceMonitorPath">
+                            Disk path to monitor (leave blank for auto)
+                        </label>
+                        <input id="diskSpaceMonitorPath" name="diskSpaceMonitorPath" type="text" is="emby-input" />
+                    </div>
+
+                    <div class="inputContainer">
+                        <label class="inputLabel inputLabelUnfocused" for="scheduledTaskHour">
+                            Task run hour (0–23, server local time)
+                        </label>
+                        <input id="scheduledTaskHour" name="scheduledTaskHour" type="number" min="0" max="23"
+                            is="emby-input" />
+                    </div>
+
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label>
+                            <input is="emby-checkbox" type="checkbox" id="dryRun" name="dryRun" />
+                            <span>Dry Run mode (log only, do not delete)</span>
+                        </label>
+                    </div>
+
+                    <div>
+                        <button is="emby-button" type="submit" class="raised button-submit block">
+                            <span>Save</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script src="configurationpage.js"></script>
+</body>
+
+</html>

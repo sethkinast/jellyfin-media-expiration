@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <AssemblyName>Jellyfin.Plugin.MediaExpiration</AssemblyName>
+    <RootNamespace>Jellyfin.Plugin.MediaExpiration</RootNamespace>
+    <Version>1.0.0.0</Version>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Jellyfin.Model" Version="10.11.6" />
+    <PackageReference Include="Jellyfin.Controller" Version="10.11.6" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="logo.png" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Web\configurationpage.html" />
+    <EmbeddedResource Include="Web\configurationpage.js" />
+    <EmbeddedResource Include="Web\detailbadge.js" />
+  </ItemGroup>
+
+  <Target Name="GenerateMetaJson" BeforeTargets="Build">
+    <PropertyGroup>
+      <_BuildTimestamp>$([System.DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.0000000Z"))</_BuildTimestamp>
+    </PropertyGroup>
+    <MakeDir Directories="$(OutputPath)" />
+    <ItemGroup>
+      <_MetaJsonLine Include="{" />
+      <_MetaJsonLine Include='  "category": "General",' />
+      <_MetaJsonLine Include='  "changelog": "Initial release.",' />
+      <_MetaJsonLine Include='  "description": "Automatically expires and deletes media based on watch activity.",' />
+      <_MetaJsonLine Include='  "guid": "16445656-5f0a-4ea5-8e04-00d8f9c935c9",' />
+      <_MetaJsonLine Include='  "name": "Media Expiration",' />
+      <_MetaJsonLine Include='  "owner": "cogdev",' />
+      <_MetaJsonLine Include='  "targetAbi": "10.11.6.0",' />
+      <_MetaJsonLine Include='  "timestamp": "$(_BuildTimestamp)",' />
+      <_MetaJsonLine Include='  "version": "$(Version)",' />
+      <_MetaJsonLine Include='  "status": "Active",' />
+      <_MetaJsonLine Include='  "autoUpdate": true,' />
+      <_MetaJsonLine Include='  "imagePath": "/config/data/plugins/Media Expiration_$(Version)/logo.png",' />
+      <_MetaJsonLine Include='  "assemblies": []' />
+      <_MetaJsonLine Include="}" />
+    </ItemGroup>
+    <WriteLinesToFile File="$(OutputPath)meta.json" Lines="@(_MetaJsonLine)" Overwrite="true" />
+  </Target>
+</Project>
