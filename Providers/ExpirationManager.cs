@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Jellyfin.Plugin.MediaExpiration.Configuration;
 using Jellyfin.Data.Enums;
+using Jellyfin.Database.Implementations.Entities;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Entities.TV;
@@ -42,12 +43,13 @@ public class ExpirationManager
     {
         var config = Plugin.Instance!.Configuration;
         var results = new List<ExpirationInfo>();
+        var users = _userManager.GetUsers().ToList();
 
         if (config.MovieExpirationDays > 0)
-            results.AddRange(GetMovieExpirations(config));
+            results.AddRange(GetMovieExpirations(config, users));
 
         if (config.SeasonExpirationDays > 0)
-            results.AddRange(GetSeasonExpirations(config));
+            results.AddRange(GetSeasonExpirations(config, users));
 
         return results.OrderBy(e => e.ExpiresAt).ToList();
     }
@@ -106,7 +108,7 @@ public class ExpirationManager
 
     // --- Private helpers ---
 
-    private IEnumerable<ExpirationInfo> GetMovieExpirations(PluginConfiguration config)
+    private IEnumerable<ExpirationInfo> GetMovieExpirations(PluginConfiguration config, IReadOnlyList<User> users)
     {
         var movies = _libraryManager.GetItemList(new InternalItemsQuery
         {
@@ -117,10 +119,10 @@ public class ExpirationManager
         foreach (var movie in movies)
         {
             // Skip favorites (any user favoriting it protects the item)
-            if (IsAnyUserFavorite(movie))
+            if (IsAnyUserFavorite(movie, users))
                 continue;
 
-            var lastWatched = GetLastWatchedAcrossAllUsers(movie);
+            var lastWatched = GetLastWatchedAcrossAllUsers(movie, users);
             if (lastWatched is null)
             {
                 if (config.UnwatchedMovieExpirationDays <= 0)
@@ -137,7 +139,7 @@ public class ExpirationManager
         }
     }
 
-    private IEnumerable<ExpirationInfo> GetSeasonExpirations(PluginConfiguration config)
+    private IEnumerable<ExpirationInfo> GetSeasonExpirations(PluginConfiguration config, IReadOnlyList<User> users)
     {
         var seasons = _libraryManager.GetItemList(new InternalItemsQuery
         {
@@ -148,7 +150,7 @@ public class ExpirationManager
         foreach (var season in seasons.OfType<Season>())
         {
             // Skip if the season or its parent show is favorited by anyone
-            if (IsAnyUserFavorite(season) || (season.Series is not null && IsAnyUserFavorite(season.Series)))
+            if (IsAnyUserFavorite(season, users) || (season.Series is not null && IsAnyUserFavorite(season.Series, users)))
                 continue;
 
             // Get all episodes in this season
@@ -163,7 +165,7 @@ public class ExpirationManager
             DateTime? lastWatched = null;
             foreach (var episode in episodes)
             {
-                var episodeWatch = GetLastWatchedAcrossAllUsers(episode);
+                var episodeWatch = GetLastWatchedAcrossAllUsers(episode, users);
                 if (episodeWatch.HasValue && (lastWatched is null || episodeWatch > lastWatched))
                     lastWatched = episodeWatch;
             }
@@ -184,10 +186,10 @@ public class ExpirationManager
         }
     }
 
-    private DateTime? GetLastWatchedAcrossAllUsers(BaseItem item)
+    private DateTime? GetLastWatchedAcrossAllUsers(BaseItem item, IReadOnlyList<User> users)
     {
         DateTime? latest = null;
-        foreach (var user in _userManager.Users)
+        foreach (var user in users)
         {
             var userData = _userDataManager.GetUserData(user, item);
             if (userData?.LastPlayedDate.HasValue == true)
@@ -199,9 +201,9 @@ public class ExpirationManager
         return latest;
     }
 
-    private bool IsAnyUserFavorite(BaseItem item)
+    private bool IsAnyUserFavorite(BaseItem item, IReadOnlyList<User> users)
     {
-        return _userManager.Users.Any(user =>
+        return users.Any(user =>
         {
             var userData = _userDataManager.GetUserData(user, item);
             return userData?.IsFavorite == true;
