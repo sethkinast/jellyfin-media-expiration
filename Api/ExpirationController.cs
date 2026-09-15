@@ -35,14 +35,21 @@ public class ExpirationController : ControllerBase
         var candidates = _expirationManager.GetExpirationCandidates();
         var match = candidates.FirstOrDefault(e => e.Item.Id.ToString("N") == itemId);
 
-        // If no direct match, check if this is an episode and inherit from its season
+        // If no direct match, check if this is an episode or season and inherit from its show
         if (match is null)
         {
             var item = _libraryManager.GetItemById(Guid.ParseExact(itemId, "N"));
-            if (item is Episode episode && episode.Season is not null)
+            var series = item switch
             {
-                var seasonId = episode.Season.Id.ToString("N");
-                match = candidates.FirstOrDefault(e => e.Item.Id.ToString("N") == seasonId);
+                Episode episode => episode.Series,
+                Season season => season.Series,
+                _ => null
+            };
+
+            if (series is not null)
+            {
+                var seriesId = series.Id.ToString("N");
+                match = candidates.FirstOrDefault(e => e.Item.Id.ToString("N") == seriesId);
             }
         }
 

@@ -49,7 +49,7 @@ public class ExpirationManager
             results.AddRange(GetMovieExpirations(config, users));
 
         if (config.SeasonExpirationDays > 0)
-            results.AddRange(GetSeasonExpirations(config, users));
+            results.AddRange(GetShowExpirations(config, users));
 
         return results.OrderBy(e => e.ExpiresAt).ToList();
     }
@@ -139,29 +139,52 @@ public class ExpirationManager
         }
     }
 
-    private IEnumerable<ExpirationInfo> GetSeasonExpirations(PluginConfiguration config, IReadOnlyList<User> users)
+    /// <summary>
+    /// Evaluates expiration at the show (Series) level rather than per-season: watching any
+    /// episode in any season resets the clock for the entire show, and the whole show
+    /// expires (and is deleted) together rather than season-by-season.
+    /// </summary>
+    private IEnumerable<ExpirationInfo> GetShowExpirations(PluginConfiguration config, IReadOnlyList<User> users)
     {
-        var seasons = _libraryManager.GetItemList(new InternalItemsQuery
+        var series = _libraryManager.GetItemList(new InternalItemsQuery
         {
-            IncludeItemTypes = new[] { BaseItemKind.Season },
+            IncludeItemTypes = new[] { BaseItemKind.Series },
             IsVirtualItem = false
-        }, false).OfType<Season>();
+        }, false).OfType<Series>();
 
-        foreach (var season in seasons.OfType<Season>())
+        foreach (var show in series)
         {
-            // Skip if the season or its parent show is favorited by anyone
-            if (IsAnyUserFavorite(season, users) || (season.Series is not null && IsAnyUserFavorite(season.Series, users)))
+            // Skip if the show itself is favorited by anyone
+            if (IsAnyUserFavorite(show, users))
                 continue;
 
-            // Get all episodes in this season
-            var episodes = _libraryManager.GetItemList(new InternalItemsQuery
+            var seasons = _libraryManager.GetItemList(new InternalItemsQuery
             {
-                ParentId = season.Id,
-                IncludeItemTypes = new[] { BaseItemKind.Episode },
+                ParentId = show.Id,
+                IncludeItemTypes = new[] { BaseItemKind.Season },
                 IsVirtualItem = false
-            }, false);
+            }, false).OfType<Season>().ToList();
 
-            // Last watched = most recent watch across all episodes, all users
+            // Skip if any individual season is favorited by anyone
+            if (seasons.Any(season => IsAnyUserFavorite(season, users)))
+                continue;
+
+            // Gather every episode across every season of the show
+            var episodes = new List<BaseItem>();
+            foreach (var season in seasons)
+            {
+                episodes.AddRange(_libraryManager.GetItemList(new InternalItemsQuery
+                {
+                    ParentId = season.Id,
+                    IncludeItemTypes = new[] { BaseItemKind.Episode },
+                    IsVirtualItem = false
+                }, false));
+            }
+
+            if (episodes.Count == 0)
+                continue;
+
+            // Last watched = most recent watch across all episodes, all seasons, all users
             DateTime? lastWatched = null;
             foreach (var episode in episodes)
             {
@@ -174,14 +197,14 @@ public class ExpirationManager
             {
                 if (config.UnwatchedSeasonExpirationDays <= 0)
                     continue;
-                var expiresAt = season.DateCreated.AddDays(config.UnwatchedSeasonExpirationDays);
-                yield return new ExpirationInfo(season, null, expiresAt, (int)(expiresAt - DateTime.UtcNow).TotalDays);
+                var expiresAt = show.DateCreated.AddDays(config.UnwatchedSeasonExpirationDays);
+                yield return new ExpirationInfo(show, null, expiresAt, (int)(expiresAt - DateTime.UtcNow).TotalDays);
                 continue;
             }
 
             {
                 var expiresAt = lastWatched.Value.AddDays(config.SeasonExpirationDays);
-                yield return new ExpirationInfo(season, lastWatched, expiresAt, (int)(expiresAt - DateTime.UtcNow).TotalDays);
+                yield return new ExpirationInfo(show, lastWatched, expiresAt, (int)(expiresAt - DateTime.UtcNow).TotalDays);
             }
         }
     }

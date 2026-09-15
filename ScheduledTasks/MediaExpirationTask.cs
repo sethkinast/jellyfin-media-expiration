@@ -23,7 +23,7 @@ public class MediaExpirationTask : IScheduledTask
 
     public string Name => "Expire Media";
     public string Key => "MediaExpirationExpireMedia";
-    public string Description => "Deletes movies and TV seasons that have exceeded their expiration period.";
+    public string Description => "Deletes movies and TV shows that have exceeded their expiration period.";
     public string Category => "Media Expiration";
 
     public MediaExpirationTask(
@@ -72,15 +72,15 @@ public class MediaExpirationTask : IScheduledTask
             cancellationToken.ThrowIfCancellationRequested();
 
             var entry = expired[i];
-            var displayName = entry.Item is Season s && s.Series is not null
-                ? $"{s.Series.Name} - {entry.Item.Name}"
-                : entry.Item.Name;
+            var displayName = entry.Item.Name;
 
             _logger.LogInformation(
                 "Deleting expired {Type}: '{Name}' (last watched {LastWatched}, expired {ExpiresAt:d})",
                 entry.Item.GetType().Name, displayName,
                 entry.LastWatched.HasValue ? entry.LastWatched.Value.ToString("d") : "never",
-                entry.ExpiresAt);            if (Plugin.Instance!.Configuration.DryRun)
+                entry.ExpiresAt);
+
+            if (Plugin.Instance!.Configuration.DryRun)
             {
                 _logger.LogInformation("Dry run enabled. Skipping actual deletion for '{Name}'.", displayName);
             }
@@ -88,23 +88,44 @@ public class MediaExpirationTask : IScheduledTask
             {
                 try
                 {
-                    // For seasons, delete each episode's files then the season folder
-                    if (entry.Item is Season season)
+                    // For a show, delete every episode, then every season, then the
+                    // series itself so no empty season/series shell is left behind.
+                    if (entry.Item is Series series)
                     {
-                        var episodes = _libraryManager.GetItemList(new InternalItemsQuery
+                        var seasons = _libraryManager.GetItemList(new InternalItemsQuery
                         {
-                            ParentId = season.Id,
-                            IncludeItemTypes = new[] { BaseItemKind.Episode },
+                            ParentId = series.Id,
+                            IncludeItemTypes = new[] { BaseItemKind.Season },
                             IsVirtualItem = false
                         }, false);
 
-                        foreach (var episode in episodes)
+                        foreach (var season in seasons)
                         {
-                            _libraryManager.DeleteItem(episode, new DeleteOptions
+                            var episodes = _libraryManager.GetItemList(new InternalItemsQuery
+                            {
+                                ParentId = season.Id,
+                                IncludeItemTypes = new[] { BaseItemKind.Episode },
+                                IsVirtualItem = false
+                            }, false);
+
+                            foreach (var episode in episodes)
+                            {
+                                _libraryManager.DeleteItem(episode, new DeleteOptions
+                                {
+                                    DeleteFileLocation = true
+                                });
+                            }
+
+                            _libraryManager.DeleteItem(season, new DeleteOptions
                             {
                                 DeleteFileLocation = true
                             });
                         }
+
+                        _libraryManager.DeleteItem(series, new DeleteOptions
+                        {
+                            DeleteFileLocation = true
+                        });
                     }
                     else
                     {

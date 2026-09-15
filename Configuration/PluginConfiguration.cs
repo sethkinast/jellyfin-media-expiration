@@ -7,13 +7,18 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>Days after last watch before a movie expires. 0 = disabled.</summary>
     public int MovieExpirationDays { get; set; } = 180;
 
-    /// <summary>Days after last watch before a TV season expires. 0 = disabled.</summary>
+    /// <summary>
+    /// Days after the last watch of ANY episode in a show (any season) before the entire
+    /// show expires. Watching any episode resets the clock for the whole show, and
+    /// expiration deletes the whole show (all seasons/episodes), not one season at a time.
+    /// 0 = disabled.
+    /// </summary>
     public int SeasonExpirationDays { get; set; } = 90;
 
     /// <summary>Days after DateCreated before an unwatched movie expires. 0 = disabled.</summary>
     public int UnwatchedMovieExpirationDays { get; set; } = 0;
 
-    /// <summary>Days after DateCreated before an unwatched TV season expires. 0 = disabled.</summary>
+    /// <summary>Days after DateCreated before a completely unwatched TV show expires. 0 = disabled.</summary>
     public int UnwatchedSeasonExpirationDays { get; set; } = 0;
 
     /// <summary>Items expiring within this many days appear in the Expiring Soon collection.</summary>
