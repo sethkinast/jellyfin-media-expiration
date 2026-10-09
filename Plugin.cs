@@ -50,44 +50,55 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
 
     public void RegisterWithHomeScreenSections(ILogger logger)
     {
-        try
+        // NB: match ALL assemblies, not just the first. If multiple
+        // companion versions are loaded (e.g. a stale version folder left
+        // behind by an upgrade), FirstOrDefault could pick a dead
+        // instance whose registry no live controller reads -- the log
+        // would still say "Registered" while the section never appears.
+        // Registering with every match is idempotent per instance (the
+        // companion keys by section id) and harmless.
+        var homeScreenSectionsAssemblies = AssemblyLoadContext.All
+            .SelectMany(x => x.Assemblies)
+            .Where(x => x.FullName?.Contains(".HomeScreenSections") ?? false)
+            .ToList();
+
+        if (homeScreenSectionsAssemblies.Count == 0)
         {
-            var homeScreenSectionsAssembly = AssemblyLoadContext.All
-                .SelectMany(x => x.Assemblies)
-                .FirstOrDefault(x => x.FullName?.Contains(".HomeScreenSections") ?? false);
-
-            if (homeScreenSectionsAssembly is null)
-            {
-                logger.LogInformation("Home Screen Sections plugin not found — Expiring Soon home section disabled.");
-                return;
-            }
-
-            var pluginInterfaceType = homeScreenSectionsAssembly.GetType("Jellyfin.Plugin.HomeScreenSections.PluginInterface");
-            var registerMethod = pluginInterfaceType?.GetMethod("RegisterSection");
-
-            if (registerMethod is null)
-            {
-                logger.LogWarning("Home Screen Sections RegisterSection method not found.");
-                return;
-            }
-
-            var payload = new Newtonsoft.Json.Linq.JObject
-            {
-                { "id",              $"media-expiration-{Id}" },
-                { "displayText",     ExpiringSoonCollectionName },
-                { "limit",           1 },
-                { "additionalData",  "" },
-                { "resultsAssembly", GetType().Assembly.FullName },
-                { "resultsClass",    "Jellyfin.Plugin.MediaExpiration.Providers.HomeSectionResultsHandler" },
-                { "resultsMethod",   "GetResults" }
-            };
-
-            registerMethod.Invoke(null, new object?[] { payload });
-            logger.LogInformation("Registered Expiring Soon home section with Home Screen Sections plugin.");
+            logger.LogInformation("Home Screen Sections plugin not found — Expiring Soon home section disabled.");
+            return;
         }
-        catch (Exception ex)
+
+        var payload = new Newtonsoft.Json.Linq.JObject
         {
-            logger.LogError(ex, "Failed to register Expiring Soon home section.");
+            { "id",              $"media-expiration-{Id}" },
+            { "displayText",     ExpiringSoonCollectionName },
+            { "limit",           1 },
+            { "additionalData",  "" },
+            { "resultsAssembly", GetType().Assembly.FullName },
+            { "resultsClass",    "Jellyfin.Plugin.MediaExpiration.Providers.HomeSectionResultsHandler" },
+            { "resultsMethod",   "GetResults" }
+        };
+
+        foreach (var asm in homeScreenSectionsAssemblies)
+        {
+            try
+            {
+                var pluginInterfaceType = asm.GetType("Jellyfin.Plugin.HomeScreenSections.PluginInterface");
+                var registerMethod = pluginInterfaceType?.GetMethod("RegisterSection");
+
+                if (registerMethod is null)
+                {
+                    logger.LogWarning("Home Screen Sections RegisterSection method not found in {Assembly}.", asm.FullName);
+                    continue;
+                }
+
+                registerMethod.Invoke(null, new object?[] { payload });
+                logger.LogInformation("Registered Expiring Soon home section with Home Screen Sections plugin ({Assembly}).", asm.FullName);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Failed to register Expiring Soon home section with {Assembly}.", asm.FullName);
+            }
         }
     }
 
