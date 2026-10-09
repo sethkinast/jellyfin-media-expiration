@@ -83,14 +83,16 @@
     let fetchInFlight = null;
 
     function findAnchor() {
-        // Jellyfin can leave multiple stale #itemDetailPage copies in the DOM
-        // (duplicate IDs — invalid HTML, but it happens). document.querySelector
-        // returns the FIRST match, which may be a hidden stale copy. We need
-        // the anchor in the VISIBLE subtree.
+        // Jellyfin keeps old detail pages in the DOM when navigating,
+        // hiding them with a "hide" class on div.itemDetailPage instead of
+        // removing them — so duplicate IDs pile up. document.querySelector
+        // returns the FIRST match, which may be a hidden stale copy.
         const candidates = document.querySelectorAll(
             '.detailPageContent .actionButtons, .itemDetailPage .mainDetailButtons, .detailRibbon'
         );
         for (const el of candidates) {
+            // Skip anchors inside hidden stale copies
+            if (el.closest('.hide')) continue;
             // getClientRects() is empty for display:none or detached subtrees
             if (el.getClientRects().length > 0) {
                 return el;
