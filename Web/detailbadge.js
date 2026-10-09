@@ -85,20 +85,31 @@
     function findAnchor() {
         // Jellyfin keeps old detail pages in the DOM when navigating,
         // hiding them with a "hide" class on div.itemDetailPage instead of
-        // removing them — so duplicate IDs pile up. document.querySelector
-        // returns the FIRST match, which may be a hidden stale copy.
-        const candidates = document.querySelectorAll(
-            '.detailPageContent .actionButtons, .itemDetailPage .mainDetailButtons, .detailRibbon'
-        );
-        for (const el of candidates) {
-            // Skip anchors inside hidden stale copies
-            if (el.closest('.hide')) continue;
-            // getClientRects() is empty for display:none or detached subtrees
-            if (el.getClientRects().length > 0) {
-                return el;
+        // removing them — so duplicate IDs pile up. Check each selector in
+        // priority order (NOT combined: querySelectorAll returns DOM order,
+        // which would put parent .detailRibbon before child .mainDetailButtons).
+        const selectors = [
+            '.detailPageContent .actionButtons',
+            '.itemDetailPage .mainDetailButtons',
+            '.detailRibbon'
+        ];
+        for (const selector of selectors) {
+            const candidates = document.querySelectorAll(selector);
+            for (const el of candidates) {
+                // Skip anchors inside hidden stale copies
+                if (el.closest('.hide')) continue;
+                // getClientRects() is empty for display:none or detached subtrees
+                if (el.getClientRects().length > 0) {
+                    return el;
+                }
             }
         }
-        return candidates[0] ?? null;
+        // Fallback: first match of any selector, visible or not
+        for (const selector of selectors) {
+            const el = document.querySelector(selector);
+            if (el) return el;
+        }
+        return null;
     }
 
     async function tryInject() {
