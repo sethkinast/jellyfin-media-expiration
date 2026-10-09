@@ -45,12 +45,17 @@ public class HomeSectionResultsHandler
         if (collection is null)
             return new QueryResult<BaseItemDto>();
 
+        // Only build DTOs for the items we'll actually display — the full
+        // collection can be 30+ items and GetBaseItemDtos is the bottleneck.
+        const int MaxItems = 6;
+
         var items = collection.LinkedChildren
             .Where(lc => lc.ItemId.HasValue)
             .Select(lc => _libraryManager.GetItemById(lc.ItemId!.Value))
             .Where(item => item is not null)
             .Cast<BaseItem>()
             .OrderBy(_ => Random.Shared.Next())
+            .Take(MaxItems)
             .ToList();
 
         var user = _userManager.GetUserById(request.UserId);
