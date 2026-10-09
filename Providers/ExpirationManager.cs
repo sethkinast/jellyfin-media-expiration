@@ -150,13 +150,19 @@ public class ExpirationManager
         {
             IncludeItemTypes = new[] { BaseItemKind.Series },
             IsVirtualItem = false
-        }, false).OfType<Series>();
+        }, false).OfType<Series>().ToList();
+
+        // TEMPORARY diagnostics for shows-missing-from-candidates issue
+        _logger.LogInformation("GetShowExpirations: found {SeriesCount} series in library.", series.Count);
 
         foreach (var show in series)
         {
             // Skip if the show itself is favorited by anyone
             if (IsAnyUserFavorite(show, users))
+            {
+                _logger.LogInformation("GetShowExpirations: skipping '{Show}' — favorited.", show.Name);
                 continue;
+            }
 
             var seasons = _libraryManager.GetItemList(new InternalItemsQuery
             {
@@ -167,7 +173,10 @@ public class ExpirationManager
 
             // Skip if any individual season is favorited by anyone
             if (seasons.Any(season => IsAnyUserFavorite(season, users)))
+            {
+                _logger.LogInformation("GetShowExpirations: skipping '{Show}' — a season is favorited.", show.Name);
                 continue;
+            }
 
             // Gather every episode across every season of the show
             var episodes = new List<BaseItem>();
@@ -181,8 +190,14 @@ public class ExpirationManager
                 }, false));
             }
 
+            _logger.LogInformation("GetShowExpirations: '{Show}' has {SeasonCount} seasons, {EpisodeCount} episodes.",
+                show.Name, seasons.Count, episodes.Count);
+
             if (episodes.Count == 0)
+            {
+                _logger.LogInformation("GetShowExpirations: skipping '{Show}' — no episodes found.", show.Name);
                 continue;
+            }
 
             // Last watched = most recent watch across all episodes, all seasons, all users
             DateTime? lastWatched = null;
