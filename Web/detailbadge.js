@@ -111,8 +111,9 @@
         // Remove stale badge from a different item
         existing?.remove();
 
-        // Fetch if needed (or reuse cache)
-        if (itemId !== lastItemId) {
+        // Fetch if needed (or reuse cache). A null cached result means the
+        // previous fetch failed, so retry instead of trusting the null.
+        if (itemId !== lastItemId || !lastInfo) {
             // Avoid duplicate in-flight requests for the same item
             if (fetchInFlight === itemId) return;
             fetchInFlight = itemId;
