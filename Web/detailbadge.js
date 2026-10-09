@@ -59,9 +59,8 @@
         badge.textContent = text;
 
         // The detail page action buttons row is a stable anchor point
-        const anchor = document.querySelector('.detailPageContent .actionButtons')
-            ?? document.querySelector('.itemDetailPage .mainDetailButtons')
-            ?? document.querySelector('.detailRibbon');
+        // (findAnchor picks the visible copy if Jellyfin left stale dupes)
+        const anchor = findAnchor();
 
         if (anchor) {
             anchor.prepend(badge);
@@ -84,9 +83,20 @@
     let fetchInFlight = null;
 
     function findAnchor() {
-        return document.querySelector('.detailPageContent .actionButtons')
-            ?? document.querySelector('.itemDetailPage .mainDetailButtons')
-            ?? document.querySelector('.detailRibbon');
+        // Jellyfin can leave multiple stale #itemDetailPage copies in the DOM
+        // (duplicate IDs — invalid HTML, but it happens). document.querySelector
+        // returns the FIRST match, which may be a hidden stale copy. We need
+        // the anchor in the VISIBLE subtree.
+        const candidates = document.querySelectorAll(
+            '.detailPageContent .actionButtons, .itemDetailPage .mainDetailButtons, .detailRibbon'
+        );
+        for (const el of candidates) {
+            // getClientRects() is empty for display:none or detached subtrees
+            if (el.getClientRects().length > 0) {
+                return el;
+            }
+        }
+        return candidates[0] ?? null;
     }
 
     async function tryInject() {
