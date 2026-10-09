@@ -1,0 +1,20 @@
+[
+  {
+    "category": "General",
+    "description": "Automatically expires and deletes media based on watch activity.",
+    "guid": "16445656-5f0a-4ea5-8e04-00d8f9c935c9",
+    "name": "Media Expiration",
+    "overview": "Automatically expires and deletes movies and TV shows based on watch activity. Adds an \"Expiring Soon\" home section and detail-page badges showing expiration status.",
+    "owner": "cogdev",
+    "versions": [
+      {
+        "version": "1.1.0.0",
+        "changelog": "Jellyfin 12.1 retarget; Expiring Soon home section; detail-page expiry badges; whole-series expiration.",
+        "targetAbi": "12.1.0.0",
+        "sourceUrl": "https://github.com/sethkinast/jellyfin-media-expiration/releases/download/v1.1.0.0/mediaexpiration-1.1.0.0.zip",
+        "checksum": "e77ae329d8c05dfd6189ad9227649c51",
+        "timestamp": "2026-10-09T05:37:45Z"
+      }
+    ]
+  }
+]
