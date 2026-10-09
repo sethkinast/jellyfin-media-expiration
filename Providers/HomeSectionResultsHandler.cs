@@ -45,11 +45,19 @@ public class HomeSectionResultsHandler
         if (collection is null)
             return new QueryResult<BaseItemDto>();
 
-        var items = collection.LinkedChildren
+        var ids = collection.LinkedChildren
             .Where(lc => lc.ItemId.HasValue)
-            .Select(lc => _libraryManager.GetItemById(lc.ItemId!.Value))
-            .Where(item => item is not null)
-            .Cast<BaseItem>()
+            .Select(lc => lc.ItemId!.Value)
+            .ToArray();
+
+        if (ids.Length == 0)
+            return new QueryResult<BaseItemDto>();
+
+        // Single batched query instead of N GetItemById calls
+        var items = _libraryManager.GetItemList(new InternalItemsQuery
+        {
+            Ids = ids
+        }, false)
             .OrderBy(_ => Random.Shared.Next())
             .ToList();
 
